@@ -1,3 +1,6 @@
+# Sectoral
+sectoral <- "Property"
+
 # StockIDs
 stockIDs <- c('WSKT','PTPP','WIKA',
               'SMRA','ASRI','CTRA')

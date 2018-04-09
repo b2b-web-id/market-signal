@@ -1,3 +1,6 @@
+# Sectoral
+sectoral <- "Mining"
+
 # StockIDs
 stockIDs <- c('INCO','PTBA','ADRO')
 

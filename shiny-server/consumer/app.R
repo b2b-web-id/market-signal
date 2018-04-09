@@ -1,3 +1,6 @@
+# Sectoral
+sectoral <- "Consumer"
+
 # StockIDs
 stockIDs <- c('INDF')
 

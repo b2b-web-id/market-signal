@@ -1,3 +1,6 @@
+# Sectoral
+sectoral <- "Infrastructures"
+
 # StockIDs
 stockIDs <- c('TLKM')
 

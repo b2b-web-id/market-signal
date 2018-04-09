@@ -44,9 +44,7 @@ pivots <- function(data, lagts=TRUE) {
 ui <- fluidPage(
   
   # Application title
-  titlePanel(paste(sep=" ",
-                   sectoral,
-                   "Stocks")),
+  titlePanel("Stocks"),
   
   # FluidRow 
   sidebarLayout(
