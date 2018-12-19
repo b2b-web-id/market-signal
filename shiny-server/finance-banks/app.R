@@ -55,7 +55,7 @@ pivots <- function(data, lagts=TRUE) {
 ui <- fluidPage(
 
   # Application title
-  titlePanel(paste(sep="",
+  titlePanel(paste(sep=" ",
                    sectoral,
                    "Stocks")),
   

@@ -3,6 +3,7 @@
 # Built for Market.B2B.Web.ID
 ###########################################
 # Library: Quantmod
+library(quantmod)
 ###########################################
 
 # Sectoral
@@ -49,7 +50,7 @@ pivots <- function(data, lagts=TRUE) {
 ui <- fluidPage(
   
   # Application title
-  titlePanel(paste(sep="",
+  titlePanel(paste(sep=" ",
                    sectoral,
                    "Stocks")),
   
