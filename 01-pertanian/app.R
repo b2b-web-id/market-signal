@@ -9,6 +9,10 @@
 library(shiny)
 library(quantmod)
 
+# StockIDs
+stockIDs <- c('BISI','AALI','ANJT','BWPT','DNSG')
+
+# Functions
 require_symbol <- function(symbol, envir=parent.frame()) {
   if(is.null(envir[[symbol]])) {
     envir[[symbol]] <- getSymbols(symbol, src="yahoo",
@@ -16,7 +20,6 @@ require_symbol <- function(symbol, envir=parent.frame()) {
   }
   envir[[symbol]]
 }
-
 fNum <- function(x) {
   format(x, decimal.mark=".", big.mark=" ",
          nsmall = 1)
@@ -168,3 +171,6 @@ server <- function(input, output) {
           sep=" ")
   })
 }
+
+# Run the application
+shinyApp(ui = ui, server = server)
