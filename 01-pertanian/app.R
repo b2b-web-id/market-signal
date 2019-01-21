@@ -10,6 +10,7 @@ library(shiny)
 library(quantmod)
 
 # StockIDs
+sectoral <- "Agriculture"
 stockIDs <- c('BISI','AALI','ANJT','BWPT','DNSG')
 
 # Functions
