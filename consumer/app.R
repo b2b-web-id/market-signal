@@ -1,4 +1,5 @@
 # StockIDs
+sectoral <- "Consumer"
 stockIDs <- c('INDF')
 
 # Source
