@@ -10,9 +10,8 @@ library(shiny)
 library(quantmod)
 
 # StockIDs
-sectoral <- "Agriculture"
-stockIDs <- c('BISI','AALI','ANJT','BWPT','DNSG',
-              'SIMP','DSFI')
+sectoral <- "Basic & Chem Ind's"
+stockIDs <- c('SMGR','KRAS','WTON','WSBP','JPFA')
 
 # Functions
 require_symbol <- function(symbol, envir=parent.frame()) {
