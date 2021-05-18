@@ -12,7 +12,7 @@ library(quantmod)
 # StockIDs
 sectoral <- "Finance"
 stockIDs <- c('BJBR','BJTM','BBRI','BBCA','BBKP',
-              'BBNI','BMRI')
+              'BBNI','BMRI','BBTN','INPC','BGTG')
 
 # Functions
 require_symbol <- function(symbol, envir=parent.frame()) {
@@ -48,15 +48,18 @@ ui <- fluidPage(
     ),
     # Show a plot of the generated distribution
     mainPanel(
-      div(plotOutput("plotStock",
-                     width = "100%", height = "475px")),
       p(span("--- SMA(10)", style="color:blue"),
         span("--- EMA(50)", style="color:green")),
-      p(textOutput("lastDay")),
+      div(plotOutput("plotStock",
+                     width = "100%", height = "475px")),
       p(textOutput("smaData")),
       p(textOutput("emaData")),
+      p(textOutput("lastDay")),
       p(textOutput("todayData")),
-      p(textOutput("summaryData"))
+      p(textOutput("summaryData360")),
+      p(textOutput("summaryData90")),
+      p(textOutput("summaryData30")),
+      p(textOutput("summaryData5"))
     )
   )
 )
@@ -71,7 +74,7 @@ server <- function(input, output) {
     candleChart(symbol_data, type=input$chart_type,
                 up.col = "blue", dn.col = "red",
                 theme = "white",
-                subset = "2017-12-01/",
+                subset = "2018-12-01/",
                 TA = c(addMACD(fast=12, slow=26, signal=2),
                        addRSI(n=14),
                        addBBands(n=20, sd=2, maType="SMA"),
@@ -161,12 +164,45 @@ server <- function(input, output) {
       ggsave(file, make_chart(input$stockID))
     }
   )
-  output$summaryData <- renderText({
+  output$summaryData360 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=360)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[360 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
+  output$summaryData90 <- renderText({
     symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
                                   symbol_env)
     mData <- na.omit(as.data.frame(tail(symbol_data, n=90)))
     names(mData) <- c('Open','High','Low','Close','Vol','Adj')
     paste("[90 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
+  output$summaryData30 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=30)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[30 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
+  output$summaryData5 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=5)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[5 days] Lowest:", min(mData[, c('Low')]), "|",
           "Highest :", max(mData[, c('High')]), "|",
           "Mean :", fNum(mean(mData[, c('Close')])), "|",
           "Vol Mean :", fNum(mean(mData[, c('Vol')])),
