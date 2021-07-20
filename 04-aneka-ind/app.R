@@ -9,6 +9,10 @@
 library(shiny)
 library(quantmod)
 
+# StockIDs
+sectoral <- "Misc Ind's"
+stockIDs <- c('UNTR','ASII','SRIL')
+
 # Functions
 require_symbol <- function(symbol, envir=parent.frame()) {
   if(is.null(envir[[symbol]])) {
@@ -22,29 +26,13 @@ fNum <- function(x) {
          nsmall = 1)
 }
 
-pivots <- function(data, lagts=TRUE) {
-  center <- xts(rowSums(HLC(data))/3,
-                order.by=index(data))
-  R1 <- (2*center)-Lo(data)
-  S1 <- (2*center)-Hi(data)
-  R2 <- center + (R1 - S1)
-  S2 <- center - (R1 - S1)
-  ret <- cbind(center, R1, R2, S1, S2)
-  colnames(ret) <- c("center", "R1", "R2", "S1", "S2")
-  if(lagts) {
-    newrow <- xts(t(rep(NA,5)),
-                  order.by=last(index(data))+1)
-    ret <- rbind(ret, newrow)
-    ret <- lag.xts(ret)
-  }
-  return(ret)
-}
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
   # Application title
-  titlePanel("Stocks"),
+  titlePanel(paste(sep=" ",
+                   sectoral,
+                   "Stocks")),
   
   # FluidRow 
   sidebarLayout(
@@ -60,14 +48,13 @@ ui <- fluidPage(
     # Show a plot of the generated distribution
     mainPanel(
       div(plotOutput("plotStock",
-                     width = "100%", height = "425px")),
+                     width = "100%", height = "475px")),
       p(span("--- SMA(10)", style="color:blue"),
         span("--- EMA(50)", style="color:green")),
       p(textOutput("lastDay")),
       p(textOutput("smaData")),
       p(textOutput("emaData")),
       p(textOutput("todayData")),
-      p(textOutput("pivotData")),
       p(textOutput("summaryData"))
     )
   )
@@ -167,22 +154,6 @@ server <- function(input, output) {
           "Low :", mData[7], "|",
           "Volume :", fNum(mData[8]))
   })
-  output$pivotData <- renderText({
-    symbol_data <- na.omit(require_symbol(paste(input$stockID,
-                                                "JK",
-                                                sep="."),
-                                          symbol_env))
-    monthly_data <- to.monthly(symbol_data, drop.time = TRUE)
-    pivot_data <- lag(pivots(monthly_data, lagts = F))
-    pivot <- cbind(symbol_data, pivot_data)
-    pivot[, 7:11] <- na.locf(pivot[, 7:11])
-    piv <- tail(pivot, n=1)
-    paste("[Pivot] Center:", fNum(piv$center), "|",
-          "S2 :", fNum(piv$S2), "|",
-          "S1 :", fNum(piv$S1), "|",
-          "R1 :", fNum(piv$R1), "|",
-          "R2 :", fNum(piv$R2), "|")
-  })
   output$downloadPlot <- downloadHandler(
     filename = function() { paste(input$stockID, '.png', sep='') },
     content = function(file) {
@@ -201,3 +172,6 @@ server <- function(input, output) {
           sep=" ")
   })
 }
+
+# Run the application
+shinyApp(ui = ui, server = server)

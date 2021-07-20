@@ -9,6 +9,11 @@
 library(shiny)
 library(quantmod)
 
+# StockIDs
+sectoral <- "Finance"
+stockIDs <- c('BJBR','BJTM','BBRI','BBCA','BBKP',
+              'BBNI','BMRI','BBTN','INPC','BGTG')
+
 # Functions
 require_symbol <- function(symbol, envir=parent.frame()) {
   if(is.null(envir[[symbol]])) {
@@ -22,29 +27,13 @@ fNum <- function(x) {
          nsmall = 1)
 }
 
-pivots <- function(data, lagts=TRUE) {
-  center <- xts(rowSums(HLC(data))/3,
-                order.by=index(data))
-  R1 <- (2*center)-Lo(data)
-  S1 <- (2*center)-Hi(data)
-  R2 <- center + (R1 - S1)
-  S2 <- center - (R1 - S1)
-  ret <- cbind(center, R1, R2, S1, S2)
-  colnames(ret) <- c("center", "R1", "R2", "S1", "S2")
-  if(lagts) {
-    newrow <- xts(t(rep(NA,5)),
-                  order.by=last(index(data))+1)
-    ret <- rbind(ret, newrow)
-    ret <- lag.xts(ret)
-  }
-  return(ret)
-}
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
   # Application title
-  titlePanel("Stocks"),
+  titlePanel(paste(sep=" ",
+                   sectoral,
+                   "Stocks")),
   
   # FluidRow 
   sidebarLayout(
@@ -59,16 +48,18 @@ ui <- fluidPage(
     ),
     # Show a plot of the generated distribution
     mainPanel(
-      div(plotOutput("plotStock",
-                     width = "100%", height = "425px")),
       p(span("--- SMA(10)", style="color:blue"),
         span("--- EMA(50)", style="color:green")),
-      p(textOutput("lastDay")),
+      div(plotOutput("plotStock",
+                     width = "100%", height = "475px")),
       p(textOutput("smaData")),
       p(textOutput("emaData")),
+      p(textOutput("lastDay")),
       p(textOutput("todayData")),
-      p(textOutput("pivotData")),
-      p(textOutput("summaryData"))
+      p(textOutput("summaryData360")),
+      p(textOutput("summaryData90")),
+      p(textOutput("summaryData30")),
+      p(textOutput("summaryData5"))
     )
   )
 )
@@ -83,7 +74,7 @@ server <- function(input, output) {
     candleChart(symbol_data, type=input$chart_type,
                 up.col = "blue", dn.col = "red",
                 theme = "white",
-                subset = "2017-12-01/",
+                subset = "2018-12-01/",
                 TA = c(addMACD(fast=12, slow=26, signal=2),
                        addRSI(n=14),
                        addBBands(n=20, sd=2, maType="SMA"),
@@ -167,29 +158,24 @@ server <- function(input, output) {
           "Low :", mData[7], "|",
           "Volume :", fNum(mData[8]))
   })
-  output$pivotData <- renderText({
-    symbol_data <- na.omit(require_symbol(paste(input$stockID,
-                                                "JK",
-                                                sep="."),
-                                          symbol_env))
-    monthly_data <- to.monthly(symbol_data, drop.time = TRUE)
-    pivot_data <- lag(pivots(monthly_data, lagts = F))
-    pivot <- cbind(symbol_data, pivot_data)
-    pivot[, 7:11] <- na.locf(pivot[, 7:11])
-    piv <- tail(pivot, n=1)
-    paste("[Pivot] Center:", fNum(piv$center), "|",
-          "S2 :", fNum(piv$S2), "|",
-          "S1 :", fNum(piv$S1), "|",
-          "R1 :", fNum(piv$R1), "|",
-          "R2 :", fNum(piv$R2), "|")
-  })
   output$downloadPlot <- downloadHandler(
     filename = function() { paste(input$stockID, '.png', sep='') },
     content = function(file) {
       ggsave(file, make_chart(input$stockID))
     }
   )
-  output$summaryData <- renderText({
+  output$summaryData360 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=360)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[360 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
+  output$summaryData90 <- renderText({
     symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
                                   symbol_env)
     mData <- na.omit(as.data.frame(tail(symbol_data, n=90)))
@@ -200,4 +186,29 @@ server <- function(input, output) {
           "Vol Mean :", fNum(mean(mData[, c('Vol')])),
           sep=" ")
   })
+  output$summaryData30 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=30)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[30 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
+  output$summaryData5 <- renderText({
+    symbol_data <- require_symbol(paste(input$stockID,"JK",sep="."),
+                                  symbol_env)
+    mData <- na.omit(as.data.frame(tail(symbol_data, n=5)))
+    names(mData) <- c('Open','High','Low','Close','Vol','Adj')
+    paste("[5 days] Lowest:", min(mData[, c('Low')]), "|",
+          "Highest :", max(mData[, c('High')]), "|",
+          "Mean :", fNum(mean(mData[, c('Close')])), "|",
+          "Vol Mean :", fNum(mean(mData[, c('Vol')])),
+          sep=" ")
+  })
 }
+
+# Run the application
+shinyApp(ui = ui, server = server)
