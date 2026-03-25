@@ -120,11 +120,29 @@ summarize_window <- function(symbol_data, window) {
   mData <- na.omit(as.data.frame(tail(symbol_data, n = window)))
   names(mData) <- c("Open", "High", "Low", "Close", "Vol", "Adj")
 
+  range_size <- max(mData[, "High"]) - min(mData[, "Low"])
+
+  close_position_pct <- if (is.na(range_size) || range_size == 0) {
+    NA_real_
+  } else {
+    ((tail(mData[, "Close"], n = 1) - min(mData[, "Low"])) / range_size) * 100
+  }
+
+  range_pct <- if (tail(mData[, "Close"], n = 1) == 0) {
+    NA_real_
+  } else {
+    (range_size / tail(mData[, "Close"], n = 1)) * 100
+  }
+
   data.frame(
     highest = max(mData[, "High"]),
     lowest = min(mData[, "Low"]),
     mean_price = mean(mData[, "Close"]),
-    mean_volume = mean(mData[, "Vol"])
+    mean_volume = mean(mData[, "Vol"]),
+    last_close = tail(mData[, "Close"], n = 1),
+    last_volume = tail(mData[, "Vol"], n = 1),
+    range_pct = range_pct,
+    close_position_pct = close_position_pct
   )
 }
 
@@ -183,6 +201,11 @@ feature_engine <- function(symbol_data) {
     ((highest20_prev - lowest20_prev) / close_now) * 100
   }
 
+  sum_20 <- summarize_window(symbol_data, 20)
+  sum_60 <- summarize_window(symbol_data, 60)
+  sum_90 <- summarize_window(symbol_data, 90)
+  sum_360 <- summarize_window(symbol_data, 360)
+
   data.frame(
     close = close_now,
     ema20 = ema20_now,
@@ -198,6 +221,13 @@ feature_engine <- function(symbol_data) {
     momentum_5d_pct = momentum_5d_pct,
     day_return_pct = day_return_pct,
     range_20d_pct = range_20d_pct,
+    close_position_20d = sum_20$close_position_pct,
+    close_position_60d = sum_60$close_position_pct,
+    close_position_90d = sum_90$close_position_pct,
+    close_position_360d = sum_360$close_position_pct,
+    range_60d_pct = sum_60$range_pct,
+    range_90d_pct = sum_90$range_pct,
+    range_360d_pct = sum_360$range_pct,
     ema50_slope_up = !is.na(ema50_now) && !is.na(ema50_prev) && ema50_now > ema50_prev,
     breakout_20d = !is.na(close_now) && !is.na(highest20_prev) && close_now > highest20_prev,
     breakdown_20d = !is.na(close_now) && !is.na(lowest20_prev) && close_now < lowest20_prev,
@@ -256,6 +286,26 @@ score_decision <- function(features, regime) {
 
   if (!is.na(features$distance_ema50_pct)) {
     score <- score + ifelse(features$distance_ema50_pct >= 8, 1, ifelse(features$distance_ema50_pct <= -8, -1, 0))
+  }
+
+  if (!is.na(features$close_position_20d)) {
+    score <- score + ifelse(features$close_position_20d >= 80, 1, ifelse(features$close_position_20d <= 20, -1, 0))
+  }
+
+  if (!is.na(features$close_position_60d)) {
+    score <- score + ifelse(features$close_position_60d >= 70, 1, ifelse(features$close_position_60d <= 30, -1, 0))
+  }
+
+  if (!is.na(features$close_position_90d)) {
+    score <- score + ifelse(features$close_position_90d >= 70, 1, ifelse(features$close_position_90d <= 30, -1, 0))
+  }
+
+  if (!is.na(features$range_20d_pct) && features$range_20d_pct <= 6 && features$close_position_20d >= 75) {
+    score <- score + 1
+  }
+
+  if (!is.na(features$range_20d_pct) && features$range_20d_pct <= 6 && features$close_position_20d <= 25) {
+    score <- score - 1
   }
 
   if (identical(regime, "high_volatility")) {
@@ -417,6 +467,24 @@ format_window_summary <- function(window, summary_data) {
   )
 }
 
+rolling_summary_table <- function(symbol_data, windows) {
+  do.call(rbind, lapply(windows, function(window) {
+    summary_data <- summarize_window(symbol_data, window)
+
+    data.frame(
+      window = paste0(window, "D"),
+      low = display_num(summary_data$lowest),
+      high = display_num(summary_data$highest),
+      mean = display_num(summary_data$mean_price),
+      range_pct = paste0(display_num(summary_data$range_pct), "%"),
+      close_position = paste0(display_num(summary_data$close_position_pct), "%"),
+      close_vs_mean = ifelse(summary_data$last_close >= summary_data$mean_price, "above", "below"),
+      vol_vs_avg = ifelse(summary_data$last_volume >= summary_data$mean_volume, "above", "below"),
+      stringsAsFactors = FALSE
+    )
+  }))
+}
+
 format_feature_summary <- function(features) {
   paste(
     "[Features] Dist EMA50:",
@@ -445,4 +513,16 @@ format_score_summary <- function(score_output) {
     "| Label:", score_output$label,
     "| Action:", score_output$action
   )
+}
+
+score_tone <- function(score_output) {
+  label <- as.character(score_output$label[[1]])
+
+  if (label %in% c("strong_bullish", "bullish")) {
+    "bullish"
+  } else if (label %in% c("strong_bearish", "bearish")) {
+    "bearish"
+  } else {
+    "neutral"
+  }
 }
